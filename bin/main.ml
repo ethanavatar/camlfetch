@@ -15,7 +15,8 @@ let username = exec_cmd "whoami";;
 let hostname = exec_cmd "uname --nodename";;
 
 let os_name = exec_cmd "lsb_release --short --id";;
-let os_version = exec_cmd "lsb_release --short --description";;
+let os = exec_cmd "lsb_release --short --description";;
+
 let kernel_version = exec_cmd "uname --kernel-release";;
 
 let uptime = let s = exec_cmd "uptime --pretty" in 
@@ -31,7 +32,7 @@ let package_count =
 
 let shell =
     let shell_exe = Sys.getenv "SHELL" in 
-    exec_cmd (shell_exe ^ " --version");;
+    Filename.basename shell_exe;;
 
 let terminal =
     let wt_session = Sys.getenv "WT_SESSION" in
@@ -48,22 +49,34 @@ let memory =
     let list = List.map int_of_string (Str.split (Str.regexp " ") free) in 
     let total = List.nth list 0 in
     let used = List.nth list 1 in 
-    String.concat "" [string_of_int used; "MiB / "; string_of_int total; "MiB"];;
+    let usage = (float_of_int used) /. (float_of_int total) *. 100. |> int_of_float in
+    String.concat "" [string_of_int used; "MiB / "; string_of_int total; "MiB"; " ("; string_of_int usage; "%)"];;
+
+(*
+let color_blocks =
+    let rec first_row i =
+        if i = 8 then "\x1b[0m\n"
+        else Printf.sprintf "\x1b[4%dm   " i ^ first_row (i + 1) in
+    let rec second_row i =
+        if i = 16 then "\x1b[0m\n"
+        else Printf.sprintf "\x1b[48;5;%dm   " i ^ second_row (i + 1) in
+    first_row 0 ^ second_row 8;;
+*)
 
 let () =
     let hostname_lenth = (String.length username) + (String.length hostname) + 1 in
     let s = String.concat "" [
         String.concat "" [red; username; white; "@"; red; hostname; "\n"];
         String.concat "" [white; (String.make hostname_lenth '-'); "\n"];
-        entry red "OS" os_name;
-        entry red "OS Version" os_version;
-        entry red "Kernel Version" kernel_version;
+        entry red "OS" os;
+        entry red "Kernel" kernel_version;
         entry red "Uptime" uptime;
         entry red "Packages" package_count;
-        entry red "Default" shell;
+        entry red "Shell" shell;
         entry red "Terminal" terminal;
         entry red "CPU" cpu;
         entry red "GPU" gpu;
         entry red "Memory" memory;
+        (* color_blocks; *)
     ] in 
     print_string s;;
